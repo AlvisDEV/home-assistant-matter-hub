@@ -2,6 +2,7 @@ import {
   type BinarySensorDeviceAttributes,
   BinarySensorDeviceClass,
   type ClimateDeviceAttributes,
+  ClimateDeviceFeature,
   ClimateHvacAction,
   ClimateHvacMode,
   ClusterId,
@@ -152,6 +153,28 @@ describe("createLegacyEndpointType", () => {
       .sort();
     const expected = Object.keys(ClusterId).sort();
     expect(actual).toEqual(expected);
+  });
+
+  it("should create a climate endpoint when heat and cool share HA temperature limits", () => {
+    const entity = createEntity<ClimateDeviceAttributes>(
+      "climate.knx_air_conditioner",
+      ClimateHvacMode.cool,
+      {
+        current_temperature: 25,
+        hvac_action: ClimateHvacAction.cooling,
+        hvac_modes: [ClimateHvacMode.heat, ClimateHvacMode.cool],
+        max_temp: 30,
+        min_temp: 18,
+        supported_features: ClimateDeviceFeature.TARGET_TEMPERATURE,
+        temperature: 24,
+      },
+    );
+
+    const endpointType = createLegacyEndpointType(entity);
+    expect(endpointType).not.toBeUndefined();
+
+    const endpoint = new Endpoint(endpointType as EndpointType);
+    expect(Object.keys(endpoint.state)).toContain(ClusterId.thermostat);
   });
 });
 

@@ -48,6 +48,9 @@ export class ThermostatServerBase extends FeaturedBase {
   declare state: ThermostatServerBase.State;
 
   override async initialize() {
+    if (this.features.autoMode) {
+      this.state.minSetpointDeadBand = 0;
+    }
     this.state.controlSequenceOfOperation =
       this.features.cooling && this.features.heating
         ? Thermostat.ControlSequenceOfOperation.CoolingAndHeating
@@ -93,11 +96,17 @@ export class ThermostatServerBase extends FeaturedBase {
         ?.celsius(true) ?? this.state.occupiedHeatingSetpoint;
     const targetCoolingTemperature =
       config
-        .getTargetHeatingTemperature(entity.state, this.agent)
+        .getTargetCoolingTemperature(entity.state, this.agent)
         ?.celsius(true) ?? this.state.occupiedCoolingSetpoint;
 
     const systemMode = this.getSystemMode(entity);
     const runningMode = config.getRunningMode(entity.state, this.agent);
+
+    if (this.features.autoMode) {
+      applyPatchState(this.state, {
+        minSetpointDeadBand: 0,
+      });
+    }
 
     applyPatchState(this.state, {
       localTemperature: localTemperature,
@@ -123,7 +132,6 @@ export class ThermostatServerBase extends FeaturedBase {
         : {}),
       ...(this.features.autoMode
         ? {
-            minSetpointDeadBand: 0,
             thermostatRunningMode: runningMode,
           }
         : {}),

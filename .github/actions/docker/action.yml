@@ -24,9 +24,9 @@ runs:
     - name: Build metadata
       id: meta
       shell: bash
-      env:
-        DOCKER_IMAGE_BASENAME: ghcr.io/t0bst4r/home-assistant-matter-hub
       run: |
+        DOCKER_REPOSITORY="${GITHUB_REPOSITORY,,}"
+        DOCKER_IMAGE_BASENAME="ghcr.io/${DOCKER_REPOSITORY}"
         CONTEXT=$(dirname "${{inputs.dockerfile}}")
         DOCKER_TYPE=$(basename "${{inputs.dockerfile}}" .Dockerfile)
 
