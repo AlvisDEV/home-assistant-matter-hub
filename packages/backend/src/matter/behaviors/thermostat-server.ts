@@ -15,6 +15,26 @@ import { transactionIsOffline } from "../../utils/transaction-is-offline.js";
 
 const FeaturedBase = Base.with("Heating", "Cooling", "AutoMode");
 
+export function clampSetpointToLimits(
+  setpoint: number | undefined,
+  minSetpointLimit: number | undefined,
+  maxSetpointLimit: number | undefined,
+  fallbackSetpoint?: number,
+) {
+  let result = setpoint ?? fallbackSetpoint;
+
+  if (result == null || !Number.isFinite(result)) {
+    result = minSetpointLimit ?? maxSetpointLimit ?? 0;
+  }
+  if (minSetpointLimit != null && result < minSetpointLimit) {
+    return minSetpointLimit;
+  }
+  if (maxSetpointLimit != null && result > maxSetpointLimit) {
+    return maxSetpointLimit;
+  }
+  return result;
+}
+
 export interface ThermostatRunningState {
   heat: boolean;
   cool: boolean;
@@ -90,14 +110,22 @@ export class ThermostatServerBase extends FeaturedBase {
     const localTemperature = config
       .getCurrentTemperature(entity.state, this.agent)
       ?.celsius(true);
-    const targetHeatingTemperature =
+    const targetHeatingTemperature = clampSetpointToLimits(
       config
         .getTargetHeatingTemperature(entity.state, this.agent)
-        ?.celsius(true) ?? this.state.occupiedHeatingSetpoint;
-    const targetCoolingTemperature =
+        ?.celsius(true),
+      minSetpointLimit,
+      maxSetpointLimit,
+      this.state.occupiedHeatingSetpoint ?? localTemperature,
+    );
+    const targetCoolingTemperature = clampSetpointToLimits(
       config
         .getTargetCoolingTemperature(entity.state, this.agent)
-        ?.celsius(true) ?? this.state.occupiedCoolingSetpoint;
+        ?.celsius(true),
+      minSetpointLimit,
+      maxSetpointLimit,
+      this.state.occupiedCoolingSetpoint ?? localTemperature,
+    );
 
     const systemMode = this.getSystemMode(entity);
     const runningMode = config.getRunningMode(entity.state, this.agent);
